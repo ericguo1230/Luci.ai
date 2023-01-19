@@ -1,0 +1,428 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Area {
+  id                      Int                  @id @default(autoincrement())
+  uuid                    String?              @unique
+  name                    String?
+  ponds                   Pond[] 
+  users                   UsersInArea[]
+  users_uuid              String[]
+  ponds_uuid              String[] 
+  creation                DateTime             @default(now())
+  status                  Int?
+  active Boolean?
+}
+
+model UsersInArea {
+  id Int @default(autoincrement())
+  area Area    @relation(fields: [area_id], references: [id])
+  area_id Int 
+  user  User @relation(fields: [user_id], references: [id])
+  user_id Int
+
+  @@id([area_id, user_id])
+}
+
+model Pond {
+  id                      Int                  @id @default(autoincrement())
+  uuid                    String? @unique           
+  name                    String?
+  name_id                 String?
+  area                    Area?                @relation(fields: [area_id], references: [id])
+  area_id                 Int?
+  area_uuid               String?
+  shape                   Shape? @relation(fields: [shape_id], references: [id])
+  shape_id                Int? @unique
+  sensor                  Sensor[]
+  sensors_uuid            String[]
+  alerts                  Alert[]
+  environment_analysis    EnvironmentAnalysis[] 
+  points                  Points? @relation(fields: [points_id], references: [id])
+  points_id               Int? @unique
+  status                  Int?
+  fsm                     FSM?
+  water_level             WaterLevel[]
+  active Boolean?
+}
+
+model WaterLevel{
+  id Int @id @default(autoincrement())
+  type String?
+  value String?
+  pond Pond? @relation(fields: [pond_id], references: [id])
+  pond_id Int?
+}
+
+model Sensor {
+  id                      Int                  @id @default(autoincrement())
+  uuid                    String? @unique
+  pond                    Pond?                 @relation(fields: [pond_id], references: [id])
+  pond_id                 Int?
+  pond_uuid               String? 
+  name                    String?
+  lat                     Float? 
+  lng                     Float?
+  update                  DateTime? @default(now())
+  values                  Record? @relation(fields: [values_id], references: [id], name: "values")
+  values_id               BigInt? @unique
+  creation                DateTime             @default(now())
+  status                  Int?
+  threshold               SensorThreshold? @relation(fields: [threshold_id], references: [id])
+  threshold_id            Int? @unique
+  environment_analysis    EnvironmentAnalysis[]
+  alerts                  Alert[]
+  unit                    Unit? @relation(fields: [unit_id], references: [id])
+  unit_id                 Int? @unique
+  seaOffset Float?
+  records Record[]
+  air_record AirRecords[]
+}
+
+model SensorThreshold {
+  id Int @id @default(autoincrement())
+  sensor Sensor?
+  orp_alert_max Int?
+  orp_alert_min Int?
+  ph_alert_max Int?
+  ph_alert_min Float?
+  conductivity_alert_max Int?
+  tds_alert_max Int?
+  do_above_20_alert_min Float?
+  do_below_20_alert_min Float?
+  salinity_alert_max Float?
+  outflow_1_alert_max Float?
+  outflow_2_alert_max Float?
+  turbidity_alert_max Float?
+}
+
+model Record {
+  id                      BigInt               @id @default(autoincrement()) @unique
+  uuid                    String? @unique
+  sensor                  Sensor?  @relation(name: "values")
+  sensor_alert            Sensor? @relation(fields: [sensor_id], references: [id])
+  sensor_id               Int?
+  sensor_uuid             String?
+  creation                DateTime             @default(now())
+  update_time             String?
+  orp                     Float?
+  ph                      Float? 
+  turbidity               Float?
+  conductivity            Float?
+  depth                   Float?
+  salinity                Float?
+  temp                    Float?
+  tds                     Float?
+  tss                     Float?
+  dissolved_oxygen        Float?
+  voltage Float?
+  cable Float?
+  hdop Float?
+  alerts                  Alert[]
+  hourly Boolean?
+  bgm Float?
+  phmv Float?
+}
+
+model Threshold {
+  id                      Int                  @id @default(autoincrement())
+  alerts                  Alert[]
+  min                     Float?
+  max                     Float?
+}
+
+model Alert {
+  id                      Int                  @id @default(autoincrement())
+  uuid                    String? @unique
+  sensor                  Sensor?               @relation(fields: [sensor_id], references: [id])
+  sensor_id               Int?
+  sensor_uuid             String?
+  pond                    Pond?                @relation(fields: [pond_id], references: [id])
+  pond_id                 Int?
+  pond_uuid               String?
+  record                  Record?               @relation(fields: [record_id], references: [id])
+  record_id               BigInt?
+  record_uuid             String?
+  alert_responses         AlertResponse[]
+  creation                DateTime?             @default(now())
+  type                    String?
+  value                   Float? 
+  unit                    String?
+  level                   Int? 
+  status                  Int? 
+  threshold               Threshold?           @relation(fields: [threshold_id], references: [id])
+  threshold_id            Int?
+  history                 String[]
+  email_notification      Boolean? 
+  timestamp               DateTime             @updatedAt
+  block_rate              Int?
+  leading                 Boolean?
+}
+
+model AlertResponse {
+  id                      Int                  @id @default(autoincrement())
+  uuid                    String? @unique
+  operator                User?                @relation(fields: [operator_id], references: [id])
+  operator_id             Int?                 @unique
+  operator_uuid           String?
+  timestamp               DateTime?            @default(now())
+  status                  Int?
+  comment                 String?
+  resolved                Boolean?
+  alert                   Alert?               @relation(fields: [alert_id], references: [id])
+  alert_id                Int?
+}
+
+model User {
+  id                      Int                  @id @default(autoincrement())
+  uuid                    String? @unique
+  username                String?
+  display_name            String?
+  area                    UsersInArea[]
+  aid_uuid                String[]
+  status                  Boolean?
+  creation                DateTime             @default(now())
+  recipient               UsersID[]
+  recipient_uuid          String[]
+  password                String?
+  role                    String[]
+  operator                AlertResponse?
+}
+
+model UsersID {
+  user                    User                 @relation(fields: [user_id], references: [id])
+  user_id                 Int
+
+  @@id([user_id])
+}
+
+model EnvironmentAnalysis {
+  id                      Int                  @id @default(autoincrement())
+  uuid                    String? @unique
+  sensors                 Sensor? @relation(fields: [sensor_id], references: [id])
+  sensor_id               Int? 
+  sensor_uuid             String?
+  pond                    Pond? @relation(fields: [pond_id], references: [id])
+  pond_id                 Int? 
+  pond_uuid               String?
+  timestamp               DateTime             @updatedAt
+  depth                   EnvironmentStatus?   @relation(name: "depth1", fields: [depth_id], references: [id])
+  depth_id                Int?                 @unique
+  ph                      EnvironmentStatus?   @relation(name: "ph1", fields: [ph_id], references: [id])
+  ph_id                   Int?                 @unique
+  ec                      EnvironmentStatus?   @relation(name: "ec1", fields: [ec_id], references: [id])
+  ec_id                   Int?                 @unique
+  tds                     EnvironmentStatus?   @relation(name: "tds1", fields: [tds_id], references: [id]) 
+  tds_id                  Int?                 @unique
+  orp                     EnvironmentStatus?   @relation(name: "orp1", fields: [orp_id], references: [id]) 
+  orp_id                  Int?                 @unique
+  do                      EnvironmentStatus?   @relation(name: "do1", fields: [do_id], references: [id])
+  do_id                   Int?                 @unique
+  turbidity               EnvironmentStatus?   @relation(name: "turbidity1", fields: [turbidity_id], references: [id]) 
+  turbidity_id            Int?                 @unique
+  tss                     EnvironmentStatus?   @relation(name: "tss1", fields: [tss_id], references: [id]) 
+  tss_id                  Int?                 @unique
+  rainfall                EnvironmentStatus?   @relation(name: "rainfall1", fields: [rainfall_id], references: [id])
+  rainfall_id             Int?                 @unique
+  salinity                EnvironmentStatus?   @relation(name: "salinity1", fields: [salinity_id], references: [id])
+  salinity_id             Int?                 @unique
+}
+
+model EnvironmentStatus {
+  id                      Int                  @id @default(autoincrement())
+  value                   Float?
+  failed                  Float?
+  category                String?
+  block_rate              Float?
+  unit                    String?
+  depth                   EnvironmentAnalysis? @relation(name: "depth1")
+  ph                      EnvironmentAnalysis? @relation(name: "ph1")
+  ec                      EnvironmentAnalysis? @relation(name: "ec1")
+  tds                     EnvironmentAnalysis? @relation(name: "tds1")
+  orp                     EnvironmentAnalysis? @relation(name: "orp1")
+  do                      EnvironmentAnalysis? @relation(name: "do1")
+  turbidity               EnvironmentAnalysis? @relation(name: "turbidity1")
+  tss                     EnvironmentAnalysis? @relation(name: "tss1")
+  rainfall                EnvironmentAnalysis? @relation(name: "rainfall1")
+  salinity                EnvironmentAnalysis? @relation(name: "salinity1")
+}
+
+model FSM {
+  id                      Int                  @id @default(autoincrement())
+  uuid                    String? @unique
+  pond                    Pond?                @relation(fields: [pond_id], references: [id])
+  pond_id                 Int?                 @unique
+  pond_uuid               String?
+  ph_machine              Machine?             @relation(name: "ph", fields: [ph_machine_id], references: [id])
+  ph_machine_id           Int?                 @unique
+  ec_machine              Machine?             @relation(name: "ec", fields: [ec_machine_id], references: [id])
+  ec_machine_id           Int?                 @unique
+  tds_machine             Machine?             @relation(name: "tds", fields: [tds_machine_id], references: [id])
+  tds_machine_id          Int?                 @unique
+  orp_machine             Machine?             @relation(name: "orp", fields: [orp_machine_id], references: [id])
+  orp_machine_id          Int?                 @unique
+  do_machine              Machine?             @relation(name: "do", fields: [do_machine_id], references: [id])
+  do_machine_id           Int?                 @unique
+  turbidity_machine       Machine?             @relation(name: "turbidity", fields: [turbidity_machine_id], references: [id])
+  turbidity_machine_id    Int?                 @unique
+  salinity_machine        Machine?             @relation(name: "salinity", fields: [salinity_machine_id], references: [id])
+  salinity_machine_id     Int?                 @unique
+}
+
+model Machine {
+  id                      Int                  @id @default(autoincrement())
+  value                   String
+  transition              String               @db.VarChar(2048)
+  ph                      FSM?                 @relation(name: "ph")
+  ec                      FSM?                 @relation(name: "ec")
+  tds                     FSM?                 @relation(name: "tds")
+  orp                     FSM?                 @relation(name: "orp")
+  do                      FSM?                 @relation(name: "do")
+  turbidity               FSM?                 @relation(name: "turbidity")
+  salinity                FSM?                 @relation(name: "salinity")
+}
+
+model ModelMapping {
+  id                      Int                  @id @default(autoincrement())
+  uuid                    String? @unique
+  model                   String?
+  sensor                  String?
+  air                     String?
+  pond                    String?
+}
+
+model Unit {
+  id                      Int                 @id @default(autoincrement())
+  sensor                  Sensor?
+  ph                      String?
+  conductivity            String?
+  tds                     String?
+  orp                     String?
+  dissolvedoxygen         String?
+  turbidity               String?
+  salinity                String?
+  temp                    String?
+  depth                   String?
+  tss                     String?
+  airtemperature          String?
+  pressure                String?
+  humidity                String?
+  rain                    String?
+}
+
+model Shape {
+  id Int @id @default(autoincrement())
+  type String?
+  pond Pond?
+  property Properties? @relation(fields: [property_id], references: [id])
+  property_id Int? @unique
+  geometry Geometry? @relation(fields: [geometry_id], references: [id])
+  geometry_id Int? @unique
+}
+
+model Properties{
+  id Int @id @default(autoincrement())
+  shape Shape?
+  fid Int?
+  object_id Int?
+  name String?
+  classifica String?
+  shape_leng Float?
+  shape_area Float?
+  shape__area Float?
+  shape__length Float?
+}
+
+model Geometry {
+  id Int @id @default(autoincrement())
+  shape Shape?
+  type String?
+  coordinates CoordOne[]
+}
+
+model CoordOne{
+  id Int @id @default(autoincrement())
+  geometry Geometry? @relation(fields:[geometry_id], references: [id])
+  geometry_id Int?
+  coord_two CoordTwo[]
+}
+
+model CoordTwo{
+  id Int @id @default(autoincrement())
+  coord CoordOne? @relation(fields:[coord_id], references: [id])
+  coord_id Int? 
+  coord_three CoordThree[]
+}
+
+model CoordThree{
+  id Int @id @default(autoincrement())
+  coord CoordTwo? @relation(fields: [coord_id], references: [id])
+  coord_id Int?
+  coords Float[]
+}
+
+model Points {
+  id Int @id @default(autoincrement())
+  pond Pond?
+  features Features[]
+}
+
+model Features {
+  id Int @id @default(autoincrement())
+  point Points? @relation(fields: [point_id], references: [id])
+  point_id Int?
+  name String?
+  value Int?
+  uuid Int?
+  coords Float[]
+}
+
+model WeatherSensor{
+  id Int @id @default(autoincrement()) @unique
+  uuid String @unique
+  name String?
+  geo Geo? @relation(fields: [geo_id], references: [id])
+  geo_id Int? @unique
+  pond_uuid String?
+}
+
+model Geo{
+  id Int @id @default(autoincrement()) @unique
+  lat Float?
+  lng Float?
+  weather_sensor WeatherSensor?
+}
+
+model AirRecords{
+  id Int @id @default(autoincrement()) @unique
+  uuid String? @unique
+  sensor_uuid String?
+  created_at DateTime?
+  update_time String?
+  sunrise_time String?
+  sunset_time String?
+  temp Float?
+  feels_like_temp Float?
+  pressure Float?
+  humidity Float?
+  dew_point_atmos_temp Float?
+  clouds Float?
+  uvi Float?
+  visibility Float?
+  wind_speed Float?
+  wind_gust Float?
+  wind_deg Float?
+  rain Float?
+  snow Float?
+  sensor Sensor? @relation(fields: [sensor_id], references: [id])
+  sensor_id Int?
+}

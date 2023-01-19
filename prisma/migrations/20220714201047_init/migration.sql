@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Features" ALTER COLUMN "coords" SET DATA TYPE DOUBLE PRECISION[];

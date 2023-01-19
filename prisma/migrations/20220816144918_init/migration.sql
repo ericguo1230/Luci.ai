@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Record" ADD COLUMN     "bgm" INTEGER,
+ADD COLUMN     "phmv" DOUBLE PRECISION;
